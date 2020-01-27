@@ -38,7 +38,7 @@ admin prisijungimas:
 username: admin
 password: orcatask1
 
-vartotojo prosijungimas
+vartotojo prisijungimas
 email: orca@email.com
 password: orcatask1
 
