@@ -1,0 +1,131 @@
+<div class="table-responsive">
+    <table class="table table-hover table-bordered table-bordered">
+        <thead>
+            <tr class="text-right">
+                <td>{{ column_name }}</td>
+                <td>{{ column_ean }}</td>
+                <td>{{ column_special }}</td>
+                <td>{{ column_date }}</td>
+                <td>{{ column_editing }}</td>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% if prices_table %}
+            {% for row_info in prices_table %}
+                <tr class="text-right text-normal" id = "{{ row_info.id }}">
+                    <td>
+                        {% if row_info.product_id is not null %}
+                        <a href="{{ row_info.link }}" target="_blank">{{ row_info.name }}</a>
+                        {% endif %}
+                    </td>
+                    <td class="ean">{{ row_info.ean }}</td>
+                    <td class="price">{{ row_info.special_price }}</td>
+                    <td>{{ row_info.date_added }}</td>
+                    <td>
+                        <button type="button" class="button-save btn btn-primary hidden">
+                            <i class="fa fa-save"></i>
+                        </button>
+                        <button type="button" class="button-edit btn btn-primary">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button type="button" data-id="{{ row_info.price_id }}" class="button-delete btn btn-danger">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr class="text-center">
+                <td colspan="5">{{ no_results }}</td>
+            </tr>
+        {% endif %}
+        </tbody>
+
+    </table>
+</div>
+
+<script type="text/javascript">
+    $('.button-delete').on('click', function (e) {
+        e.preventDefault();
+
+        var row_id = $(this).parents('tr').attr('id');
+
+        $.ajax({
+            url: 'index.php?route=customer/customer/deleteRow&user_token={{ user_token }}',
+            type: 'post',
+            dataType: 'json',
+            data: 'row_id=' + encodeURIComponent(row_id),
+            success: function (json) {
+                $('.alert-dismissible').remove();
+
+                if (json['error'])
+                    $('#tab-price').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa fa-exclamation-circle"></i> ' + json['error'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+
+                if (json['success']) {
+                    $('#tab-price').prepend('<div class="alert alert-success alert-dismissible"><i class="fa fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+                    $('#prices').load('index.php?route=customer/customer/prices&user_token={{ user_token }}&customer_id={{ customer_id }}');
+                }
+            },
+            error: function (xhr, ajaxOptions, thrownError) {
+                alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+            }
+        });
+    });
+
+    $('.button-edit').on('click', function (e) {
+        e.preventDefault();
+        $(this).addClass('hidden');
+
+        var price = $(this).parents('tr').find('.price').html();
+        var ean = $(this).parents('tr').find('.ean').html();
+
+        $(this).parents('tr').find('.price').html('<input type="text" class="text-right" id="edit_price" value="'+price+'">');
+        $(this).parents('tr').find('.ean').html('<input type="text" class="text-right" id="edit_ean" value="'+ean+'">');
+
+        $(this).parents('td').find('.button-save').removeClass('hidden');
+
+    });
+
+    $('.button-save').on('click', function (e) {
+        e.preventDefault();
+
+        var row_id = $(this).parents('tr').attr('id');
+        var ean =    $('#edit_ean').val();
+        var price =  $('#edit_price').val();
+
+        if(price==""){
+            price=" ";
+        }
+
+        $.ajax({
+            url: 'index.php?route=customer/customer/updateRow&user_token={{ user_token }}',
+            type: 'post',
+            dataType: 'json',
+            data: 'row_id=' + encodeURIComponent(row_id) + '&ean=' + encodeURIComponent(ean) + '&price=' + encodeURIComponent(price),
+            success: function (json) {
+                $('.alert-dismissible').remove();
+                $("#product-price").parents('tr').find('.button-save').addClass('hidden');
+                $("#product-price").parents('tr').find('.button-edit').removeClass('hidden');
+
+                $(this).parents('tr').find('.price').html(price);
+                $(this).parents('tr').find('.ean').html(ean);
+
+                if (json['error']) {
+                    $('#tab-price').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa fa-exclamation-circle"></i> ' + json['error'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+                }
+
+                if (json['success']) {
+                    $('#tab-price').prepend('<div class="alert alert-success alert-dismissible"><i class="fa fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+
+                    $('#prices').load('index.php?route=customer/customer/prices&user_token={{ user_token }}&customer_id={{ customer_id }}');
+                }
+            },
+            error: function (xhr, ajaxOptions, thrownError) {
+                alert(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+            }
+        });
+    });
+
+
+</script>
