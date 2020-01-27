@@ -38,6 +38,10 @@ admin prisijungimas:
 username: admin
 password: orcatask1
 
+vartotojo prosijungimas
+email: orca@email.com
+password: orcatask1
+
 PHPMyAdmin prisijungimas:
 username: root
 password: ElitezInc420
