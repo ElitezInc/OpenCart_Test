@@ -19,18 +19,16 @@ Pasitelkus svetainės serverį ir prisijungimo prie databazės galimybes, yra re
 Implementuojant CSV failo importą pirkėjų individualioms kainoms nustatyti, buvo pasitelkta MVC customers kodo praplėtimu, įdedant papildomą skiltį Customers dalyje, įsijungus redagavimo režimą, kur "Imports" dalyje yra rodoma failo įkėlimo sąsaja su funkcionalumu. Darbui su duomenimis yra naudojamasi Ajax užklausomis į kontrolerį, kur pagal gaunamus rezultatus yra manipuliuojamas turinys, pasitelkus JavaScript ir JQuery technologijomis.
 
 Sąrašas modifikuotų projekto failų:
-| Failas| Linija|
-| ------ | --------- |
-| admin/controller/customer/customer.php | line 947 |
-| admin/controller/customer/customer.php | line 1506 |
-| model/customer/customer.php | line 487
-| admin/language/en-gb/customer/customer.php | line 116 |
-| admin/view/template/customer/customer_form.twig | line 35 |
-| admin/view/template/customer/customer_form.twig | line 892 |
-| admin/view/template/customer/customer_form.twig | line 1481 |
-| catalog/model/catalog/product.php | line 10 |
-| catalog/model/catalog/product.php | line 552 |
-| Added view/template/customer/customer_prices.twig
+- admin/controller/customer/customer.php 			line 947
+- admin/controller/customer/customer.php 			line 1506
+- model/customer/customer.php 						line 487
+- admin/language/en-gb/customer/customer.php		line 116
+- admin/view/template/customer/customer_form.twig 	line 35
+- admin/view/template/customer/customer_form.twig   line 892
+- admin/view/template/customer/customer_form.twig   line 1481
+- catalog/model/catalog/product.php					line 10
+- catalog/model/catalog/product.php					line 552
+- Added view/template/customer/customer_prices.twig
 
 
 ### Veikianti užduotis
@@ -38,11 +36,7 @@ http://orca.ddns.net/
 
 admin prisijungimas:
 username: admin
-password: orcatest1
-
-vartotojo prisijungimas:
-email: orca@email.com
-password: orcatest1
+password: orcatask1
 
 PHPMyAdmin prisijungimas:
 username: root
