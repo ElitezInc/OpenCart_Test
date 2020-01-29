@@ -36,11 +36,11 @@ http://orca.ddns.net/
 
 admin prisijungimas:
 username: admin
-password: orcatask1
+password: orcatest1
 
 vartotojo prisijungimas
 email: orca@email.com
-password: orcatask1
+password: orcatest1
 
 PHPMyAdmin prisijungimas:
 username: root
