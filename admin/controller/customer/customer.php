@@ -954,14 +954,14 @@ class ControllerCustomerCustomer extends Controller {
 			$customer_id = $this->request->get['customer_id'];
 			$update_info = $this->model_customer_customer->getLog($customer_id);
 		}
-		
-        if(!empty($update_info)) {
+
+		if(!empty($update_info)) {
             $data['update'] = array(
                 'update_name' => $update_info['name'],
                 'update_date' => $update_info['modified']
-            );
+			);
 		}
-
+		
 		$data['header'] = $this->load->controller('common/header');
 		$data['column_left'] = $this->load->controller('common/column_left');
 		$data['footer'] = $this->load->controller('common/footer');

@@ -1136,10 +1136,6 @@ class ControllerCatalogProduct extends Controller {
 			$data['points'] = '';
 		}
 
-		$data['mpn'] = '420x69';
-		$data['ean'] = '420x69';
-		$data['weight'] ='420x69';
-
 		if (isset($this->request->post['product_reward'])) {
 			$data['product_reward'] = $this->request->post['product_reward'];
 		} elseif (isset($this->request->get['product_id'])) {

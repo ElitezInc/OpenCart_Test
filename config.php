@@ -1,14 +1,14 @@
 <?php
 // HTTP
-define('HTTP_SERVER', 'http://localhost/opencart/upload/');
+define('HTTP_SERVER', 'http://localhost/');
 
 // HTTPS
-define('HTTPS_SERVER', 'http://localhost/opencart/upload/');
+define('HTTPS_SERVER', 'http://localhost/');
 
 // DIR
-define('DIR_APPLICATION', 'C:/xampp/htdocs/opencart/upload/catalog/');
-define('DIR_SYSTEM', 'C:/xampp/htdocs/opencart/upload/system/');
-define('DIR_IMAGE', 'C:/xampp/htdocs/opencart/upload/image/');
+define('DIR_APPLICATION', 'C:/xampp/htdocs/catalog/');
+define('DIR_SYSTEM', 'C:/xampp/htdocs/system/');
+define('DIR_IMAGE', 'C:/xampp/htdocs/image/');
 define('DIR_STORAGE', 'C:/xampp/storage/');
 define('DIR_LANGUAGE', DIR_APPLICATION . 'language/');
 define('DIR_TEMPLATE', DIR_APPLICATION . 'view/theme/');

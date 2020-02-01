@@ -1,18 +1,18 @@
 <?php
 // HTTP
-define('HTTP_SERVER', 'http://localhost/opencart/upload/admin/');
-define('HTTP_CATALOG', 'http://localhost/opencart/upload/');
+define('HTTP_SERVER', 'http://localhost/admin/');
+define('HTTP_CATALOG', 'http://localhost/');
 
 // HTTPS
-define('HTTPS_SERVER', 'http://localhost/opencart/upload/admin/');
-define('HTTPS_CATALOG', 'http://localhost/opencart/upload/');
+define('HTTPS_SERVER', 'http://localhost/admin/');
+define('HTTPS_CATALOG', 'http://localhost/');
 
 // DIR
-define('DIR_APPLICATION', 'C:/xampp/htdocs/opencart/upload/admin/');
-define('DIR_SYSTEM', 'C:/xampp/htdocs/opencart/upload/system/');
-define('DIR_IMAGE', 'C:/xampp/htdocs/opencart/upload/image/');
+define('DIR_APPLICATION', 'C:/xampp/htdocs/admin/');
+define('DIR_SYSTEM', 'C:/xampp/htdocs/system/');
+define('DIR_IMAGE', 'C:/xampp/htdocs/image/');
 define('DIR_STORAGE', 'C:/xampp/storage/');
-define('DIR_CATALOG', 'C:/xampp/htdocs/opencart/upload/catalog/');
+define('DIR_CATALOG', 'C:/xampp/htdocs/catalog/');
 define('DIR_LANGUAGE', DIR_APPLICATION . 'language/');
 define('DIR_TEMPLATE', DIR_APPLICATION . 'view/template/');
 define('DIR_CONFIG', DIR_SYSTEM . 'config/');
