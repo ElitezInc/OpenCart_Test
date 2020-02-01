@@ -42,10 +42,6 @@ vartotojo prisijungimas
 email: orca@email.com
 password: orcatest1
 
-PHPMyAdmin prisijungimas:
-username: root
-password: ElitezInc420
-
 ### Kontaktiniai duomenys
 Gabrielius Važnevičius
 vaznevicius@gmail.com
