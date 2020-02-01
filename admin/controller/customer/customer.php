@@ -1,563 +1,1618 @@
 <?php
-class ModelCustomerCustomer extends Model {
-	public function addCustomer($data) {
-		$this->db->query("INSERT INTO " . DB_PREFIX . "customer SET customer_group_id = '" . (int)$data['customer_group_id'] . "', firstname = '" . $this->db->escape($data['firstname']) . "', lastname = '" . $this->db->escape($data['lastname']) . "', email = '" . $this->db->escape($data['email']) . "', telephone = '" . $this->db->escape($data['telephone']) . "', custom_field = '" . $this->db->escape(isset($data['custom_field']) ? json_encode($data['custom_field']) : json_encode(array())) . "', newsletter = '" . (int)$data['newsletter'] . "', salt = '" . $this->db->escape($salt = token(9)) . "', password = '" . $this->db->escape(sha1($salt . sha1($salt . sha1($data['password'])))) . "', status = '" . (int)$data['status'] . "', safe = '" . (int)$data['safe'] . "', date_added = NOW()");
+class ControllerCustomerCustomer extends Controller {
+	private $error = array();
 
-		$customer_id = $this->db->getLastId();
+	public function index() {
+		$this->load->language('customer/customer');
 
-		if (isset($data['address'])) {
-			foreach ($data['address'] as $address) {
-				$this->db->query("INSERT INTO " . DB_PREFIX . "address SET customer_id = '" . $customer_id . "', firstname = '" . $this->db->escape($address['firstname']) . "', lastname = '" . $this->db->escape($address['lastname']) . "', company = '" . $this->db->escape($address['company']) . "', address_1 = '" . $this->db->escape($address['address_1']) . "', address_2 = '" . $this->db->escape($address['address_2']) . "', city = '" . $this->db->escape($address['city']) . "', postcode = '" . $this->db->escape($address['postcode']) . "', country_id = '" . (int)$address['country_id'] . "', zone_id = '" . (int)$address['zone_id'] . "', custom_field = '" . $this->db->escape(isset($address['custom_field']) ? json_encode($address['custom_field']) : json_encode(array())) . "'");
+		$this->document->setTitle($this->language->get('heading_title'));
 
-				if (isset($address['default'])) {
-					$address_id = $this->db->getLastId();
+		$this->load->model('customer/customer');
 
-					$this->db->query("UPDATE " . DB_PREFIX . "customer SET address_id = '" . (int)$address_id . "' WHERE customer_id = '" . $customer_id . "'");
-				}
+		$this->getList();
+	}
+
+	public function add() {
+		$this->load->language('customer/customer');
+
+		$this->document->setTitle($this->language->get('heading_title'));
+
+		$this->load->model('customer/customer');
+
+		if (($this->request->server['REQUEST_METHOD'] == 'POST') && $this->validateForm()) {
+			$this->model_customer_customer->addCustomer($this->request->post);
+
+			$this->session->data['success'] = $this->language->get('text_success');
+
+			$url = '';
+
+			if (isset($this->request->get['filter_name'])) {
+				$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
 			}
-		}
-		
-		if ($data['affiliate']) {
-			$this->db->query("INSERT INTO " . DB_PREFIX . "customer_affiliate SET customer_id = '" . $customer_id . "', company = '" . $this->db->escape($data['company']) . "', website = '" . $this->db->escape($data['website']) . "', tracking = '" . $this->db->escape($data['tracking']) . "', commission = '" . (float)$data['commission'] . "', tax = '" . $this->db->escape($data['tax']) . "', payment = '" . $this->db->escape($data['payment']) . "', cheque = '" . $this->db->escape($data['cheque']) . "', paypal = '" . $this->db->escape($data['paypal']) . "', bank_name = '" . $this->db->escape($data['bank_name']) . "', bank_branch_number = '" . $this->db->escape($data['bank_branch_number']) . "', bank_swift_code = '" . $this->db->escape($data['bank_swift_code']) . "', bank_account_name = '" . $this->db->escape($data['bank_account_name']) . "', bank_account_number = '" . $this->db->escape($data['bank_account_number']) . "', custom_field = '" . $this->db->escape(isset($data['custom_field']) ? json_encode($data['custom_field']) : json_encode(array())) . "', status = '" . (int)$data['affiliate'] . "', date_added = NOW()");
-		}
-		
-		return $customer_id;
-	}
 
-	public function editCustomer($customer_id, $data) {
-		$this->db->query("UPDATE " . DB_PREFIX . "customer SET customer_group_id = '" . (int)$data['customer_group_id'] . "', firstname = '" . $this->db->escape($data['firstname']) . "', lastname = '" . $this->db->escape($data['lastname']) . "', email = '" . $this->db->escape($data['email']) . "', telephone = '" . $this->db->escape($data['telephone']) . "', custom_field = '" . $this->db->escape(isset($data['custom_field']) ? json_encode($data['custom_field']) : json_encode(array())) . "', newsletter = '" . (int)$data['newsletter'] . "', status = '" . (int)$data['status'] . "', safe = '" . (int)$data['safe'] . "' WHERE customer_id = '" . $customer_id . "'");
-
-		if ($data['password']) {
-			$this->db->query("UPDATE " . DB_PREFIX . "customer SET salt = '" . $this->db->escape($salt = token(9)) . "', password = '" . $this->db->escape(sha1($salt . sha1($salt . sha1($data['password'])))) . "' WHERE customer_id = '" . $customer_id . "'");
-		}
-
-		$this->db->query("DELETE FROM " . DB_PREFIX . "address WHERE customer_id = '" . $customer_id . "'");
-
-		if (isset($data['address'])) {
-			foreach ($data['address'] as $address) {
-				$this->db->query("INSERT INTO " . DB_PREFIX . "address SET address_id = '" . (int)$address['address_id'] . "', customer_id = '" . $customer_id . "', firstname = '" . $this->db->escape($address['firstname']) . "', lastname = '" . $this->db->escape($address['lastname']) . "', company = '" . $this->db->escape($address['company']) . "', address_1 = '" . $this->db->escape($address['address_1']) . "', address_2 = '" . $this->db->escape($address['address_2']) . "', city = '" . $this->db->escape($address['city']) . "', postcode = '" . $this->db->escape($address['postcode']) . "', country_id = '" . (int)$address['country_id'] . "', zone_id = '" . (int)$address['zone_id'] . "', custom_field = '" . $this->db->escape(isset($address['custom_field']) ? json_encode($address['custom_field']) : json_encode(array())) . "'");
-
-				if (isset($address['default'])) {
-					$address_id = $this->db->getLastId();
-
-					$this->db->query("UPDATE " . DB_PREFIX . "customer SET address_id = '" . (int)$address_id . "' WHERE customer_id = '" . $customer_id . "'");
-				}
+			if (isset($this->request->get['filter_email'])) {
+				$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
 			}
+
+			if (isset($this->request->get['filter_customer_group_id'])) {
+				$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+			}
+
+			if (isset($this->request->get['filter_status'])) {
+				$url .= '&filter_status=' . $this->request->get['filter_status'];
+			}
+
+			if (isset($this->request->get['filter_ip'])) {
+				$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+			}
+
+			if (isset($this->request->get['filter_date_added'])) {
+				$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+			}
+
+			if (isset($this->request->get['sort'])) {
+				$url .= '&sort=' . $this->request->get['sort'];
+			}
+
+			if (isset($this->request->get['order'])) {
+				$url .= '&order=' . $this->request->get['order'];
+			}
+
+			if (isset($this->request->get['page'])) {
+				$url .= '&page=' . $this->request->get['page'];
+			}
+
+			$this->response->redirect($this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url, true));
 		}
-		
-		if ($data['affiliate']) {
-			$this->db->query("REPLACE INTO " . DB_PREFIX . "customer_affiliate SET customer_id = '" . $customer_id . "', company = '" . $this->db->escape($data['company']) . "', website = '" . $this->db->escape($data['website']) . "', tracking = '" . $this->db->escape($data['tracking']) . "', commission = '" . (float)$data['commission'] . "', tax = '" . $this->db->escape($data['tax']) . "', payment = '" . $this->db->escape($data['payment']) . "', cheque = '" . $this->db->escape($data['cheque']) . "', paypal = '" . $this->db->escape($data['paypal']) . "', bank_name = '" . $this->db->escape($data['bank_name']) . "', bank_branch_number = '" . $this->db->escape($data['bank_branch_number']) . "', bank_swift_code = '" . $this->db->escape($data['bank_swift_code']) . "', bank_account_name = '" . $this->db->escape($data['bank_account_name']) . "', bank_account_number = '" . $this->db->escape($data['bank_account_number']) . "', status = '" . (int)$data['affiliate'] . "', date_added = NOW()");
-		}		
+
+		$this->getForm();
 	}
 
-	public function editToken($customer_id, $token) {
-		$this->db->query("UPDATE " . DB_PREFIX . "customer SET token = '" . $this->db->escape($token) . "' WHERE customer_id = '" . $customer_id . "'");
+	public function edit() {
+		$this->load->language('customer/customer');
+
+		$this->document->setTitle($this->language->get('heading_title'));
+
+		$this->load->model('customer/customer');
+
+		if (($this->request->server['REQUEST_METHOD'] == 'POST') && $this->validateForm()) {
+			$this->model_customer_customer->editCustomer($this->request->get['customer_id'], $this->request->post);
+
+			$this->session->data['success'] = $this->language->get('text_success');
+
+			$url = '';
+
+			if (isset($this->request->get['filter_name'])) {
+				$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+			}
+
+			if (isset($this->request->get['filter_email'])) {
+				$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
+			}
+
+			if (isset($this->request->get['filter_customer_group_id'])) {
+				$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+			}
+
+			if (isset($this->request->get['filter_status'])) {
+				$url .= '&filter_status=' . $this->request->get['filter_status'];
+			}
+
+			if (isset($this->request->get['filter_ip'])) {
+				$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+			}
+
+			if (isset($this->request->get['filter_date_added'])) {
+				$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+			}
+
+			if (isset($this->request->get['sort'])) {
+				$url .= '&sort=' . $this->request->get['sort'];
+			}
+
+			if (isset($this->request->get['order'])) {
+				$url .= '&order=' . $this->request->get['order'];
+			}
+
+			if (isset($this->request->get['page'])) {
+				$url .= '&page=' . $this->request->get['page'];
+			}
+
+			$this->response->redirect($this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url, true));
+		}
+
+		$this->getForm();
 	}
 
-	public function deleteCustomer($customer_id) {
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer WHERE customer_id = '" . $customer_id . "'");
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_activity WHERE customer_id = '" . $customer_id . "'");
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_affiliate WHERE customer_id = '" . $customer_id . "'");
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_approval WHERE customer_id = '" . $customer_id . "'");
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_reward WHERE customer_id = '" . $customer_id . "'");
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_transaction WHERE customer_id = '" . $customer_id . "'");
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_ip WHERE customer_id = '" . $customer_id . "'");
-		$this->db->query("DELETE FROM " . DB_PREFIX . "address WHERE customer_id = '" . $customer_id . "'");
+	public function delete() {
+		$this->load->language('customer/customer');
+
+		$this->document->setTitle($this->language->get('heading_title'));
+
+		$this->load->model('customer/customer');
+
+		if (isset($this->request->post['selected']) && $this->validateDelete()) {
+			foreach ($this->request->post['selected'] as $customer_id) {
+				$this->model_customer_customer->deleteCustomer($customer_id);
+			}
+
+			$this->session->data['success'] = $this->language->get('text_success');
+
+			$url = '';
+
+			if (isset($this->request->get['filter_name'])) {
+				$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+			}
+
+			if (isset($this->request->get['filter_email'])) {
+				$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
+			}
+
+			if (isset($this->request->get['filter_customer_group_id'])) {
+				$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+			}
+
+			if (isset($this->request->get['filter_status'])) {
+				$url .= '&filter_status=' . $this->request->get['filter_status'];
+			}
+
+			if (isset($this->request->get['filter_ip'])) {
+				$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+			}
+
+			if (isset($this->request->get['filter_date_added'])) {
+				$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+			}
+
+			if (isset($this->request->get['sort'])) {
+				$url .= '&sort=' . $this->request->get['sort'];
+			}
+
+			if (isset($this->request->get['order'])) {
+				$url .= '&order=' . $this->request->get['order'];
+			}
+
+			if (isset($this->request->get['page'])) {
+				$url .= '&page=' . $this->request->get['page'];
+			}
+
+			$this->response->redirect($this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url, true));
+		}
+
+		$this->getList();
 	}
 
-	public function getCustomer($customer_id) {
-		$query = $this->db->query("SELECT DISTINCT * FROM " . DB_PREFIX . "customer WHERE customer_id = '" . $customer_id . "'");
+	public function unlock() {
+		$this->load->language('customer/customer');
 
-		return $query->row;
+		$this->document->setTitle($this->language->get('heading_title'));
+
+		$this->load->model('customer/customer');
+
+		if (isset($this->request->get['email']) && $this->validateUnlock()) {
+			$this->model_customer_customer->deleteLoginAttempts($this->request->get['email']);
+
+			$this->session->data['success'] = $this->language->get('text_success');
+
+			$url = '';
+
+			if (isset($this->request->get['filter_name'])) {
+				$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+			}
+
+			if (isset($this->request->get['filter_email'])) {
+				$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
+			}
+
+			if (isset($this->request->get['filter_customer_group_id'])) {
+				$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+			}
+
+			if (isset($this->request->get['filter_status'])) {
+				$url .= '&filter_status=' . $this->request->get['filter_status'];
+			}
+
+			if (isset($this->request->get['filter_ip'])) {
+				$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+			}
+
+			if (isset($this->request->get['filter_date_added'])) {
+				$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+			}
+
+			if (isset($this->request->get['sort'])) {
+				$url .= '&sort=' . $this->request->get['sort'];
+			}
+
+			if (isset($this->request->get['order'])) {
+				$url .= '&order=' . $this->request->get['order'];
+			}
+
+			if (isset($this->request->get['page'])) {
+				$url .= '&page=' . $this->request->get['page'];
+			}
+
+			$this->response->redirect($this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url, true));
+		}
+
+		$this->getList();
 	}
 
-	public function getCustomerByEmail($email) {
-		$query = $this->db->query("SELECT DISTINCT * FROM " . DB_PREFIX . "customer WHERE LCASE(email) = '" . $this->db->escape(utf8_strtolower($email)) . "'");
-
-		return $query->row;
-	}
-	
-	public function getCustomers($data = array()) {
-		$sql = "SELECT *, CONCAT(c.firstname, ' ', c.lastname) AS name, cgd.name AS customer_group FROM " . DB_PREFIX . "customer c LEFT JOIN " . DB_PREFIX . "customer_group_description cgd ON (c.customer_group_id = cgd.customer_group_id)";
-		
-		if (!empty($data['filter_affiliate'])) {
-			$sql .= " LEFT JOIN " . DB_PREFIX . "customer_affiliate ca ON (c.customer_id = ca.customer_id)";
-		}		
-		
-		$sql .= " WHERE cgd.language_id = '" . (int)$this->config->get('config_language_id') . "'";
-		
-		$implode = array();
-
-		if (!empty($data['filter_name'])) {
-			$implode[] = "CONCAT(c.firstname, ' ', c.lastname) LIKE '%" . $this->db->escape($data['filter_name']) . "%'";
+	protected function getList() {
+		if (isset($this->request->get['filter_name'])) {
+			$filter_name = $this->request->get['filter_name'];
+		} else {
+			$filter_name = '';
 		}
 
-		if (!empty($data['filter_email'])) {
-			$implode[] = "c.email LIKE '" . $this->db->escape($data['filter_email']) . "%'";
+		if (isset($this->request->get['filter_email'])) {
+			$filter_email = $this->request->get['filter_email'];
+		} else {
+			$filter_email = '';
 		}
 
-		if (isset($data['filter_newsletter']) && !is_null($data['filter_newsletter'])) {
-			$implode[] = "c.newsletter = '" . (int)$data['filter_newsletter'] . "'";
+		if (isset($this->request->get['filter_customer_group_id'])) {
+			$filter_customer_group_id = $this->request->get['filter_customer_group_id'];
+		} else {
+			$filter_customer_group_id = '';
 		}
 
-		if (!empty($data['filter_customer_group_id'])) {
-			$implode[] = "c.customer_group_id = '" . (int)$data['filter_customer_group_id'] . "'";
+		if (isset($this->request->get['filter_status'])) {
+			$filter_status = $this->request->get['filter_status'];
+		} else {
+			$filter_status = '';
 		}
 
-		if (!empty($data['filter_affiliate'])) {
-			$implode[] = "ca.status = '" . (int)$data['filter_affiliate'] . "'";
-		}
-		
-		if (!empty($data['filter_ip'])) {
-			$implode[] = "c.customer_id IN (SELECT customer_id FROM " . DB_PREFIX . "customer_ip WHERE ip = '" . $this->db->escape($data['filter_ip']) . "')";
+		if (isset($this->request->get['filter_ip'])) {
+			$filter_ip = $this->request->get['filter_ip'];
+		} else {
+			$filter_ip = '';
 		}
 
-		if (isset($data['filter_status']) && $data['filter_status'] !== '') {
-			$implode[] = "c.status = '" . (int)$data['filter_status'] . "'";
+		if (isset($this->request->get['filter_date_added'])) {
+			$filter_date_added = $this->request->get['filter_date_added'];
+		} else {
+			$filter_date_added = '';
 		}
 
-		if (!empty($data['filter_date_added'])) {
-			$implode[] = "DATE(c.date_added) = DATE('" . $this->db->escape($data['filter_date_added']) . "')";
+		if (isset($this->request->get['sort'])) {
+			$sort = $this->request->get['sort'];
+		} else {
+			$sort = 'name';
 		}
 
-		if ($implode) {
-			$sql .= " AND " . implode(" AND ", $implode);
+		if (isset($this->request->get['order'])) {
+			$order = $this->request->get['order'];
+		} else {
+			$order = 'ASC';
 		}
 
-		$sort_data = array(
-			'name',
-			'c.email',
-			'customer_group',
-			'c.status',
-			'c.ip',
-			'c.date_added'
+		if (isset($this->request->get['page'])) {
+			$page = $this->request->get['page'];
+		} else {
+			$page = 1;
+		}
+
+		$url = '';
+
+		if (isset($this->request->get['filter_name'])) {
+			$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_email'])) {
+			$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_customer_group_id'])) {
+			$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+		}
+
+		if (isset($this->request->get['filter_status'])) {
+			$url .= '&filter_status=' . $this->request->get['filter_status'];
+		}
+
+		if (isset($this->request->get['filter_ip'])) {
+			$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+		}
+
+		if (isset($this->request->get['filter_date_added'])) {
+			$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+		}
+
+		if (isset($this->request->get['sort'])) {
+			$url .= '&sort=' . $this->request->get['sort'];
+		}
+
+		if (isset($this->request->get['order'])) {
+			$url .= '&order=' . $this->request->get['order'];
+		}
+
+		if (isset($this->request->get['page'])) {
+			$url .= '&page=' . $this->request->get['page'];
+		}
+
+		$data['breadcrumbs'] = array();
+
+		$data['breadcrumbs'][] = array(
+			'text' => $this->language->get('text_home'),
+			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'], true)
 		);
 
-		if (isset($data['sort']) && in_array($data['sort'], $sort_data)) {
-			$sql .= " ORDER BY " . $data['sort'];
-		} else {
-			$sql .= " ORDER BY name";
-		}
+		$data['breadcrumbs'][] = array(
+			'text' => $this->language->get('heading_title'),
+			'href' => $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url, true)
+		);
 
-		if (isset($data['order']) && ($data['order'] == 'DESC')) {
-			$sql .= " DESC";
-		} else {
-			$sql .= " ASC";
-		}
+		$data['add'] = $this->url->link('customer/customer/add', 'user_token=' . $this->session->data['user_token'] . $url, true);
+		$data['delete'] = $this->url->link('customer/customer/delete', 'user_token=' . $this->session->data['user_token'] . $url, true);
 
-		if (isset($data['start']) || isset($data['limit'])) {
-			if ($data['start'] < 0) {
-				$data['start'] = 0;
-			}
+		$this->load->model('setting/store');
 
-			if ($data['limit'] < 1) {
-				$data['limit'] = 20;
-			}
+		$stores = $this->model_setting_store->getStores();
+		
+		$data['customers'] = array();
 
-			$sql .= " LIMIT " . (int)$data['start'] . "," . (int)$data['limit'];
-		}
+		$filter_data = array(
+			'filter_name'              => $filter_name,
+			'filter_email'             => $filter_email,
+			'filter_customer_group_id' => $filter_customer_group_id,
+			'filter_status'            => $filter_status,
+			'filter_date_added'        => $filter_date_added,
+			'filter_ip'                => $filter_ip,
+			'sort'                     => $sort,
+			'order'                    => $order,
+			'start'                    => ($page - 1) * $this->config->get('config_limit_admin'),
+			'limit'                    => $this->config->get('config_limit_admin')
+		);
 
-		$query = $this->db->query($sql);
+		$customer_total = $this->model_customer_customer->getTotalCustomers($filter_data);
 
-		return $query->rows;
-	}
+		$results = $this->model_customer_customer->getCustomers($filter_data);
 
-	public function getAddress($address_id) {
-		$address_query = $this->db->query("SELECT * FROM " . DB_PREFIX . "address WHERE address_id = '" . (int)$address_id . "'");
+		foreach ($results as $result) {
+			$login_info = $this->model_customer_customer->getTotalLoginAttempts($result['email']);
 
-		if ($address_query->num_rows) {
-			$country_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "country` WHERE country_id = '" . (int)$address_query->row['country_id'] . "'");
-
-			if ($country_query->num_rows) {
-				$country = $country_query->row['name'];
-				$iso_code_2 = $country_query->row['iso_code_2'];
-				$iso_code_3 = $country_query->row['iso_code_3'];
-				$address_format = $country_query->row['address_format'];
+			if ($login_info && $login_info['total'] >= $this->config->get('config_login_attempts')) {
+				$unlock = $this->url->link('customer/customer/unlock', 'user_token=' . $this->session->data['user_token'] . '&email=' . $result['email'] . $url, true);
 			} else {
-				$country = '';
-				$iso_code_2 = '';
-				$iso_code_3 = '';
-				$address_format = '';
+				$unlock = '';
 			}
 
-			$zone_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "zone` WHERE zone_id = '" . (int)$address_query->row['zone_id'] . "'");
+			$store_data = array();
 
-			if ($zone_query->num_rows) {
-				$zone = $zone_query->row['name'];
-				$zone_code = $zone_query->row['code'];
-			} else {
-				$zone = '';
-				$zone_code = '';
+			$store_data[] = array(
+				'name' => $this->config->get('config_name'),
+				'href' => $this->url->link('customer/customer/login', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $result['customer_id'] . '&store_id=0', true)
+			);
+
+			foreach ($stores as $store) {
+				$store_data[] = array(
+					'name' => $store['name'],
+					'href' => $this->url->link('customer/customer/login', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $result['customer_id'] . '&store_id=' . $result['store_id'], true)
+				);
 			}
-
-			return array(
-				'address_id'     => $address_query->row['address_id'],
-				'customer_id'    => $address_query->row['customer_id'],
-				'firstname'      => $address_query->row['firstname'],
-				'lastname'       => $address_query->row['lastname'],
-				'company'        => $address_query->row['company'],
-				'address_1'      => $address_query->row['address_1'],
-				'address_2'      => $address_query->row['address_2'],
-				'postcode'       => $address_query->row['postcode'],
-				'city'           => $address_query->row['city'],
-				'zone_id'        => $address_query->row['zone_id'],
-				'zone'           => $zone,
-				'zone_code'      => $zone_code,
-				'country_id'     => $address_query->row['country_id'],
-				'country'        => $country,
-				'iso_code_2'     => $iso_code_2,
-				'iso_code_3'     => $iso_code_3,
-				'address_format' => $address_format,
-				'custom_field'   => json_decode($address_query->row['custom_field'], true)
+			
+			$data['customers'][] = array(
+				'customer_id'    => $result['customer_id'],
+				'name'           => $result['name'],
+				'email'          => $result['email'],
+				'customer_group' => $result['customer_group'],
+				'status'         => ($result['status'] ? $this->language->get('text_enabled') : $this->language->get('text_disabled')),
+				'ip'             => $result['ip'],
+				'date_added'     => date($this->language->get('date_format_short'), strtotime($result['date_added'])),
+				'unlock'         => $unlock,
+				'store'          => $store_data,
+				'edit'           => $this->url->link('customer/customer/edit', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $result['customer_id'] . $url, true)
 			);
 		}
-	}
 
-	public function getAddresses($customer_id) {
-		$address_data = array();
-
-		$query = $this->db->query("SELECT address_id FROM " . DB_PREFIX . "address WHERE customer_id = '" . $customer_id . "'");
-
-		foreach ($query->rows as $result) {
-			$address_info = $this->getAddress($result['address_id']);
-
-			if ($address_info) {
-				$address_data[$result['address_id']] = $address_info;
-			}
-		}
-
-		return $address_data;
-	}
-
-	public function getTotalCustomers($data = array()) {
-		$sql = "SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer";
-
-		$implode = array();
-
-		if (!empty($data['filter_name'])) {
-			$implode[] = "CONCAT(firstname, ' ', lastname) LIKE '%" . $this->db->escape($data['filter_name']) . "%'";
-		}
-
-		if (!empty($data['filter_email'])) {
-			$implode[] = "email LIKE '" . $this->db->escape($data['filter_email']) . "%'";
-		}
-
-		if (isset($data['filter_newsletter']) && !is_null($data['filter_newsletter'])) {
-			$implode[] = "newsletter = '" . (int)$data['filter_newsletter'] . "'";
-		}
-
-		if (!empty($data['filter_customer_group_id'])) {
-			$implode[] = "customer_group_id = '" . (int)$data['filter_customer_group_id'] . "'";
-		}
-
-		if (!empty($data['filter_ip'])) {
-			$implode[] = "customer_id IN (SELECT customer_id FROM " . DB_PREFIX . "customer_ip WHERE ip = '" . $this->db->escape($data['filter_ip']) . "')";
-		}
-
-		if (isset($data['filter_status']) && $data['filter_status'] !== '') {
-			$implode[] = "status = '" . (int)$data['filter_status'] . "'";
-		}
-
-		if (!empty($data['filter_date_added'])) {
-			$implode[] = "DATE(date_added) = DATE('" . $this->db->escape($data['filter_date_added']) . "')";
-		}
-
-		if ($implode) {
-			$sql .= " WHERE " . implode(" AND ", $implode);
-		}
-
-		$query = $this->db->query($sql);
-
-		return $query->row['total'];
-	}
-        
-        public function getAffliateByTracking($tracking) {
-                $query = $this->db->query("SELECT * FROM " . DB_PREFIX . "customer_affiliate WHERE tracking = '" . $this->db->escape($tracking) . "'");
-                
-                return $query->row;
-        }
-	
-	public function getAffiliate($customer_id) {
-		$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "customer_affiliate WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row;
-	}
-	
-	public function getAffiliates($data = array()) {
-		$sql = "SELECT DISTINCT *, CONCAT(c.firstname, ' ', c.lastname) AS name FROM " . DB_PREFIX . "customer_affiliate ca LEFT JOIN " . DB_PREFIX . "customer c ON (ca.customer_id = c.customer_id)";
+		$data['user_token'] = $this->session->data['user_token'];
 		
-		$implode = array();
+		if (isset($this->error['warning'])) {
+			$data['error_warning'] = $this->error['warning'];
+		} else {
+			$data['error_warning'] = '';
+		}
 
-		if (!empty($data['filter_name'])) {
-			$implode[] = "CONCAT(c.firstname, ' ', c.lastname) LIKE '%" . $this->db->escape($data['filter_name']) . "%'";
+		if (isset($this->session->data['success'])) {
+			$data['success'] = $this->session->data['success'];
+
+			unset($this->session->data['success']);
+		} else {
+			$data['success'] = '';
+		}
+
+		if (isset($this->request->post['selected'])) {
+			$data['selected'] = (array)$this->request->post['selected'];
+		} else {
+			$data['selected'] = array();
+		}
+
+		$url = '';
+
+		if (isset($this->request->get['filter_name'])) {
+			$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_email'])) {
+			$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_customer_group_id'])) {
+			$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+		}
+
+		if (isset($this->request->get['filter_status'])) {
+			$url .= '&filter_status=' . $this->request->get['filter_status'];
+		}
+
+		if (isset($this->request->get['filter_ip'])) {
+			$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+		}
+
+		if (isset($this->request->get['filter_date_added'])) {
+			$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+		}
+
+		if ($order == 'ASC') {
+			$url .= '&order=DESC';
+		} else {
+			$url .= '&order=ASC';
+		}
+
+		if (isset($this->request->get['page'])) {
+			$url .= '&page=' . $this->request->get['page'];
+		}
+
+		$data['sort_name'] = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . '&sort=name' . $url, true);
+		$data['sort_email'] = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . '&sort=c.email' . $url, true);
+		$data['sort_customer_group'] = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . '&sort=customer_group' . $url, true);
+		$data['sort_status'] = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . '&sort=c.status' . $url, true);
+		$data['sort_ip'] = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . '&sort=c.ip' . $url, true);
+		$data['sort_date_added'] = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . '&sort=c.date_added' . $url, true);
+
+		$url = '';
+
+		if (isset($this->request->get['filter_name'])) {
+			$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_email'])) {
+			$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_customer_group_id'])) {
+			$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+		}
+
+		if (isset($this->request->get['filter_status'])) {
+			$url .= '&filter_status=' . $this->request->get['filter_status'];
+		}
+
+		if (isset($this->request->get['filter_ip'])) {
+			$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+		}
+
+		if (isset($this->request->get['filter_date_added'])) {
+			$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+		}
+
+		if (isset($this->request->get['sort'])) {
+			$url .= '&sort=' . $this->request->get['sort'];
+		}
+
+		if (isset($this->request->get['order'])) {
+			$url .= '&order=' . $this->request->get['order'];
+		}
+
+		$pagination = new Pagination();
+		$pagination->total = $customer_total;
+		$pagination->page = $page;
+		$pagination->limit = $this->config->get('config_limit_admin');
+		$pagination->url = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url . '&page={page}', true);
+
+		$data['pagination'] = $pagination->render();
+
+		$data['results'] = sprintf($this->language->get('text_pagination'), ($customer_total) ? (($page - 1) * $this->config->get('config_limit_admin')) + 1 : 0, ((($page - 1) * $this->config->get('config_limit_admin')) > ($customer_total - $this->config->get('config_limit_admin'))) ? $customer_total : ((($page - 1) * $this->config->get('config_limit_admin')) + $this->config->get('config_limit_admin')), $customer_total, ceil($customer_total / $this->config->get('config_limit_admin')));
+
+		$data['filter_name'] = $filter_name;
+		$data['filter_email'] = $filter_email;
+		$data['filter_customer_group_id'] = $filter_customer_group_id;
+		$data['filter_status'] = $filter_status;
+		$data['filter_ip'] = $filter_ip;
+		$data['filter_date_added'] = $filter_date_added;
+
+		$this->load->model('customer/customer_group');
+
+		$data['customer_groups'] = $this->model_customer_customer_group->getCustomerGroups();
+
+		$data['sort'] = $sort;
+		$data['order'] = $order;
+		
+		$data['header'] = $this->load->controller('common/header');
+		$data['column_left'] = $this->load->controller('common/column_left');
+		$data['footer'] = $this->load->controller('common/footer');
+
+		$this->response->setOutput($this->load->view('customer/customer_list', $data));
+	}
+
+	protected function getForm() {
+		$data['text_form'] = !isset($this->request->get['customer_id']) ? $this->language->get('text_add') : $this->language->get('text_edit');
+
+		$data['user_token'] = $this->session->data['user_token'];
+
+		if (isset($this->request->get['customer_id'])) {
+			$data['customer_id'] = $this->request->get['customer_id'];
+		} else {
+			$data['customer_id'] = 0;
+		}
+
+		if (isset($this->error['warning'])) {
+			$data['error_warning'] = $this->error['warning'];
+		} else {
+			$data['error_warning'] = '';
+		}
+
+		if (isset($this->error['firstname'])) {
+			$data['error_firstname'] = $this->error['firstname'];
+		} else {
+			$data['error_firstname'] = '';
+		}
+
+		if (isset($this->error['lastname'])) {
+			$data['error_lastname'] = $this->error['lastname'];
+		} else {
+			$data['error_lastname'] = '';
+		}
+
+		if (isset($this->error['email'])) {
+			$data['error_email'] = $this->error['email'];
+		} else {
+			$data['error_email'] = '';
+		}
+
+		if (isset($this->error['telephone'])) {
+			$data['error_telephone'] = $this->error['telephone'];
+		} else {
+			$data['error_telephone'] = '';
+		}
+		
+		if (isset($this->error['cheque'])) {
+			$data['error_cheque'] = $this->error['cheque'];
+		} else {
+			$data['error_cheque'] = '';
+		}
+
+		if (isset($this->error['paypal'])) {
+			$data['error_paypal'] = $this->error['paypal'];
+		} else {
+			$data['error_paypal'] = '';
+		}
+
+		if (isset($this->error['bank_account_name'])) {
+			$data['error_bank_account_name'] = $this->error['bank_account_name'];
+		} else {
+			$data['error_bank_account_name'] = '';
+		}
+
+		if (isset($this->error['bank_account_number'])) {
+			$data['error_bank_account_number'] = $this->error['bank_account_number'];
+		} else {
+			$data['error_bank_account_number'] = '';
+		}
+		
+		if (isset($this->error['password'])) {
+			$data['error_password'] = $this->error['password'];
+		} else {
+			$data['error_password'] = '';
+		}
+
+		if (isset($this->error['confirm'])) {
+			$data['error_confirm'] = $this->error['confirm'];
+		} else {
+			$data['error_confirm'] = '';
+		}
+
+		if (isset($this->error['custom_field'])) {
+			$data['error_custom_field'] = $this->error['custom_field'];
+		} else {
+			$data['error_custom_field'] = array();
+		}
+
+		if (isset($this->error['address'])) {
+			$data['error_address'] = $this->error['address'];
+		} else {
+			$data['error_address'] = array();
+		}
+
+		$url = '';
+
+		if (isset($this->request->get['filter_name'])) {
+			$url .= '&filter_name=' . urlencode(html_entity_decode($this->request->get['filter_name'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_email'])) {
+			$url .= '&filter_email=' . urlencode(html_entity_decode($this->request->get['filter_email'], ENT_QUOTES, 'UTF-8'));
+		}
+
+		if (isset($this->request->get['filter_customer_group_id'])) {
+			$url .= '&filter_customer_group_id=' . $this->request->get['filter_customer_group_id'];
+		}
+
+		if (isset($this->request->get['filter_status'])) {
+			$url .= '&filter_status=' . $this->request->get['filter_status'];
+		}
+		
+		if (isset($this->request->get['filter_ip'])) {
+			$url .= '&filter_ip=' . $this->request->get['filter_ip'];
+		}
+		
+		if (isset($this->request->get['filter_date_added'])) {
+			$url .= '&filter_date_added=' . $this->request->get['filter_date_added'];
+		}
+
+		if (isset($this->request->get['sort'])) {
+			$url .= '&sort=' . $this->request->get['sort'];
+		}
+
+		if (isset($this->request->get['order'])) {
+			$url .= '&order=' . $this->request->get['order'];
+		}
+
+		if (isset($this->request->get['page'])) {
+			$url .= '&page=' . $this->request->get['page'];
+		}
+
+		$data['breadcrumbs'] = array();
+
+		$data['breadcrumbs'][] = array(
+			'text' => $this->language->get('text_home'),
+			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'], true)
+		);
+
+		$data['breadcrumbs'][] = array(
+			'text' => $this->language->get('heading_title'),
+			'href' => $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url, true)
+		);
+
+		if (!isset($this->request->get['customer_id'])) {
+			$data['action'] = $this->url->link('customer/customer/add', 'user_token=' . $this->session->data['user_token'] . $url, true);
+		} else {
+			$data['action'] = $this->url->link('customer/customer/edit', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $this->request->get['customer_id'] . $url, true);
+		}
+
+		$data['cancel'] = $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . $url, true);
+
+		if (isset($this->request->get['customer_id']) && ($this->request->server['REQUEST_METHOD'] != 'POST')) {
+			$customer_info = $this->model_customer_customer->getCustomer($this->request->get['customer_id']);
+		}
+
+		$this->load->model('customer/customer_group');
+
+		$data['customer_groups'] = $this->model_customer_customer_group->getCustomerGroups();
+
+		if (isset($this->request->post['customer_group_id'])) {
+			$data['customer_group_id'] = $this->request->post['customer_group_id'];
+		} elseif (!empty($customer_info)) {
+			$data['customer_group_id'] = $customer_info['customer_group_id'];
+		} else {
+			$data['customer_group_id'] = $this->config->get('config_customer_group_id');
+		}
+
+		if (isset($this->request->post['firstname'])) {
+			$data['firstname'] = $this->request->post['firstname'];
+		} elseif (!empty($customer_info)) {
+			$data['firstname'] = $customer_info['firstname'];
+		} else {
+			$data['firstname'] = '';
+		}
+
+		if (isset($this->request->post['lastname'])) {
+			$data['lastname'] = $this->request->post['lastname'];
+		} elseif (!empty($customer_info)) {
+			$data['lastname'] = $customer_info['lastname'];
+		} else {
+			$data['lastname'] = '';
+		}
+
+		if (isset($this->request->post['email'])) {
+			$data['email'] = $this->request->post['email'];
+		} elseif (!empty($customer_info)) {
+			$data['email'] = $customer_info['email'];
+		} else {
+			$data['email'] = '';
+		}
+
+		if (isset($this->request->post['telephone'])) {
+			$data['telephone'] = $this->request->post['telephone'];
+		} elseif (!empty($customer_info)) {
+			$data['telephone'] = $customer_info['telephone'];
+		} else {
+			$data['telephone'] = '';
+		}
+		
+		// Custom Fields
+		$this->load->model('customer/custom_field');
+
+		$data['custom_fields'] = array();
+
+		$filter_data = array(
+			'sort'  => 'cf.sort_order',
+			'order' => 'ASC'
+		);
+
+		$custom_fields = $this->model_customer_custom_field->getCustomFields($filter_data);
+
+		foreach ($custom_fields as $custom_field) {
+			$data['custom_fields'][] = array(
+				'custom_field_id'    => $custom_field['custom_field_id'],
+				'custom_field_value' => $this->model_customer_custom_field->getCustomFieldValues($custom_field['custom_field_id']),
+				'name'               => $custom_field['name'],
+				'value'              => $custom_field['value'],
+				'type'               => $custom_field['type'],
+				'location'           => $custom_field['location'],
+				'sort_order'         => $custom_field['sort_order']
+			);
+		}
+
+		if (isset($this->request->post['custom_field'])) {
+			$data['account_custom_field'] = $this->request->post['custom_field'];
+		} elseif (!empty($customer_info)) {
+			$data['account_custom_field'] = json_decode($customer_info['custom_field'], true);
+		} else {
+			$data['account_custom_field'] = array();
+		}
+
+		if (isset($this->request->post['newsletter'])) {
+			$data['newsletter'] = $this->request->post['newsletter'];
+		} elseif (!empty($customer_info)) {
+			$data['newsletter'] = $customer_info['newsletter'];
+		} else {
+			$data['newsletter'] = '';
+		}
+
+		if (isset($this->request->post['status'])) {
+			$data['status'] = $this->request->post['status'];
+		} elseif (!empty($customer_info)) {
+			$data['status'] = $customer_info['status'];
+		} else {
+			$data['status'] = true;
+		}
+
+		if (isset($this->request->post['safe'])) {
+			$data['safe'] = $this->request->post['safe'];
+		} elseif (!empty($customer_info)) {
+			$data['safe'] = $customer_info['safe'];
+		} else {
+			$data['safe'] = 0;
+		}
+
+		if (isset($this->request->post['password'])) {
+			$data['password'] = $this->request->post['password'];
+		} else {
+			$data['password'] = '';
+		}
+
+		if (isset($this->request->post['confirm'])) {
+			$data['confirm'] = $this->request->post['confirm'];
+		} else {
+			$data['confirm'] = '';
+		}
+
+		$this->load->model('localisation/country');
+
+		$data['countries'] = $this->model_localisation_country->getCountries();
+
+		if (isset($this->request->post['address'])) {
+			$data['addresses'] = $this->request->post['address'];
+		} elseif (isset($this->request->get['customer_id'])) {
+			$data['addresses'] = $this->model_customer_customer->getAddresses($this->request->get['customer_id']);
+		} else {
+			$data['addresses'] = array();
+		}
+
+		if (isset($this->request->post['address_id'])) {
+			$data['address_id'] = $this->request->post['address_id'];
+		} elseif (!empty($customer_info)) {
+			$data['address_id'] = $customer_info['address_id'];
+		} else {
+			$data['address_id'] = '';
+		}
+
+		// Affliate
+		if (isset($this->request->get['customer_id']) && ($this->request->server['REQUEST_METHOD'] != 'POST')) {
+			$affiliate_info = $this->model_customer_customer->getAffiliate($this->request->get['customer_id']);
 		}		
 		
-		if ($implode) {
-			$sql .= " WHERE " . implode(" AND ", $implode);
-		}
+		if (isset($this->request->post['affiliate'])) {
+			$data['affiliate'] = $this->request->post['affiliate'];
+		} elseif (!empty($affiliate_info)) {
+			$data['affiliate'] = $affiliate_info['status'];
+		} else {
+			$data['affiliate'] = '';
+		}	
 		
-		if (isset($data['start']) || isset($data['limit'])) {
-			if ($data['start'] < 0) {
-				$data['start'] = 0;
-			}
-
-			if ($data['limit'] < 1) {
-				$data['limit'] = 20;
-			}
-
-			$sql .= " LIMIT " . (int)$data['start'] . "," . (int)$data['limit'];
+		if (isset($this->request->post['company'])) {
+			$data['company'] = $this->request->post['company'];
+		} elseif (!empty($affiliate_info)) {
+			$data['company'] = $affiliate_info['company'];
+		} else {
+			$data['company'] = '';
 		}
-						
-		$query = $this->db->query($sql . "ORDER BY name");
-
-		return $query->rows;
-	}
-	
-	public function getTotalAffiliates($data = array()) {
-		$sql = "SELECT DISTINCT COUNT(*) AS total FROM " . DB_PREFIX . "customer_affiliate ca LEFT JOIN " . DB_PREFIX . "customer c ON (ca.customer_id = c.customer_id)";
-		
-		$implode = array();
-
-		if (!empty($data['filter_name'])) {
-			$implode[] = "CONCAT(c.firstname, ' ', c.lastname) LIKE '%" . $this->db->escape($data['filter_name']) . "%'";
-		}		
-		
-		if ($implode) {
-			$sql .= " WHERE " . implode(" AND ", $implode);
-		}
-		
-		return $query->row['total'];
-	}
-
-	public function getTotalAddressesByCustomerId($customer_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "address WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTotalAddressesByCountryId($country_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "address WHERE country_id = '" . (int)$country_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTotalAddressesByZoneId($zone_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "address WHERE zone_id = '" . (int)$zone_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTotalCustomersByCustomerGroupId($customer_group_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer WHERE customer_group_id = '" . (int)$customer_group_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function addHistory($customer_id, $comment) {
-		$this->db->query("INSERT INTO " . DB_PREFIX . "customer_history SET customer_id = '" . $customer_id . "', comment = '" . $this->db->escape(strip_tags($comment)) . "', date_added = NOW()");
-	}
-
-	public function getHistories($customer_id, $start = 0, $limit = 10) {
-		if ($start < 0) {
-			$start = 0;
-		}
-
-		if ($limit < 1) {
-			$limit = 10;
-		}
-
-		$query = $this->db->query("SELECT comment, date_added FROM " . DB_PREFIX . "customer_history WHERE customer_id = '" . $customer_id . "' ORDER BY date_added DESC LIMIT " . (int)$start . "," . (int)$limit);
-
-		return $query->rows;
-	}
-
-	public function getTotalHistories($customer_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer_history WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function addTransaction($customer_id, $description = '', $amount = '', $order_id = 0) {
-		$this->db->query("INSERT INTO " . DB_PREFIX . "customer_transaction SET customer_id = '" . $customer_id . "', order_id = '" . (int)$order_id . "', description = '" . $this->db->escape($description) . "', amount = '" . (float)$amount . "', date_added = NOW()");
-	}
-
-	public function deleteTransactionByOrderId($order_id) {
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_transaction WHERE order_id = '" . (int)$order_id . "'");
-	}
-
-	public function getTransactions($customer_id, $start = 0, $limit = 10) {
-		if ($start < 0) {
-			$start = 0;
-		}
-
-		if ($limit < 1) {
-			$limit = 10;
-		}
-
-		$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "customer_transaction WHERE customer_id = '" . $customer_id . "' ORDER BY date_added DESC LIMIT " . (int)$start . "," . (int)$limit);
-
-		return $query->rows;
-	}
-
-	public function getTotalTransactions($customer_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total  FROM " . DB_PREFIX . "customer_transaction WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTransactionTotal($customer_id) {
-		$query = $this->db->query("SELECT SUM(amount) AS total FROM " . DB_PREFIX . "customer_transaction WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTotalTransactionsByOrderId($order_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer_transaction WHERE order_id = '" . (int)$order_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function addReward($customer_id, $description = '', $points = '', $order_id = 0) {
-		$this->db->query("INSERT INTO " . DB_PREFIX . "customer_reward SET customer_id = '" . $customer_id . "', order_id = '" . (int)$order_id . "', points = '" . (int)$points . "', description = '" . $this->db->escape($description) . "', date_added = NOW()");
-	}
-
-	public function deleteReward($order_id) {
-		$this->db->query("DELETE FROM " . DB_PREFIX . "customer_reward WHERE order_id = '" . (int)$order_id . "' AND points > 0");
-	}
-
-	public function getRewards($customer_id, $start = 0, $limit = 10) {
-		$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "customer_reward WHERE customer_id = '" . $customer_id . "' ORDER BY date_added DESC LIMIT " . (int)$start . "," . (int)$limit);
-
-		return $query->rows;
-	}
-
-	public function getTotalRewards($customer_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer_reward WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getRewardTotal($customer_id) {
-		$query = $this->db->query("SELECT SUM(points) AS total FROM " . DB_PREFIX . "customer_reward WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTotalCustomerRewardsByOrderId($order_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer_reward WHERE order_id = '" . (int)$order_id . "' AND points > 0");
-
-		return $query->row['total'];
-	}
-
-	public function getIps($customer_id, $start = 0, $limit = 10) {
-		if ($start < 0) {
-			$start = 0;
-		}
-		if ($limit < 1) {
-			$limit = 10;
-		}
-
-		$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "customer_ip WHERE customer_id = '" . $customer_id . "' ORDER BY date_added DESC LIMIT " . (int)$start . "," . (int)$limit);
-		
-		return $query->rows;
-	}
-
-	public function getTotalIps($customer_id) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer_ip WHERE customer_id = '" . $customer_id . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTotalCustomersByIp($ip) {
-		$query = $this->db->query("SELECT COUNT(*) AS total FROM " . DB_PREFIX . "customer_ip WHERE ip = '" . $this->db->escape($ip) . "'");
-
-		return $query->row['total'];
-	}
-
-	public function getTotalLoginAttempts($email) {
-		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "customer_login` WHERE `email` = '" . $this->db->escape($email) . "'");
-
-		return $query->row;
-	}
-
-	public function deleteLoginAttempts($email) {
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "customer_login` WHERE `email` = '" . $this->db->escape($email) . "'");
-	}
-
-	// Added customer price management
-
-    public function createPriceTable(){
-        $this->db->query("CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "customer_price` ( `id` INT NOT NULL AUTO_INCREMENT , `customer_id` INT NOT NULL , `ean` VARCHAR(40) NOT NULL , `special_price` DOUBLE DEFAULT NULL, `date_added` TIMESTAMP NOT NULL , PRIMARY KEY (`id`)) ENGINE = InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;");
-    }
-
-    public function createLogsTable(){
-        $this->db->query("CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "customer_price_log` ( `customer_id` INT NOT NULL , `name` VARCHAR(30) NOT NULL , `modified` DATE NOT NULL, PRIMARY KEY (`customer_id`) ) ENGINE = InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;");
-	}
-
-    public function addPrices($customer_id, $data)
-    {
-        $this->deletePrices($customer_id);
-        $this->deleteLogs($customer_id);
-
-        foreach ($data as $values) {
-			$ean = $this->db->escape($values[0]);
-			$price = (float)$this->db->escape($values[1]);
 			
-			$this->db->query("INSERT INTO " . DB_PREFIX . "customer_price SET customer_id = '".$customer_id."', ean = '".$ean."', special_price = ". $price.", date_added = NOW()");
-        }
-	}
+		if (isset($this->request->post['website'])) {
+			$data['website'] = $this->request->post['website'];
+		} elseif (!empty($affiliate_info)) {
+			$data['website'] = $affiliate_info['website'];
+		} else {
+			$data['website'] = '';
+		}	
+					
+		if (isset($this->request->post['tracking'])) {
+			$data['tracking'] = $this->request->post['tracking'];
+		} elseif (!empty($affiliate_info)) {
+			$data['tracking'] = $affiliate_info['tracking'];
+		} else {
+			$data['tracking'] = '';
+		}	
+		
+		if (isset($this->request->post['commission'])) {
+			$data['commission'] = $this->request->post['commission'];
+		} elseif (!empty($affiliate_info)) {
+			$data['commission'] = $affiliate_info['commission'];
+		} else {
+			$data['commission'] = $this->config->get('config_affiliate_commission');
+		}
 
-    public function setRow($id, $price, $ean)
-    {
-		$id = $this->db->escape($id);
-		$price = (float)$this->db->escape($price);
-		$ean = $this->db->escape($ean); 
-
-        $this->db->query("UPDATE " . DB_PREFIX . "customer_price SET special_price = ".$price.", ean = '".$ean."', date_added = NOW() WHERE id = '" . $id . "'");
-    }
-
-    public function setLog($customer_id, $admin){
-        $this->db->query("INSERT INTO " . DB_PREFIX . "customer_price_log (customer_id, name, modified) VALUES ('".$customer_id."','".$admin."', CURRENT_DATE() ) ON DUPLICATE KEY UPDATE `name` = '".$admin."', `modified` = CURRENT_DATE()");
-    }
-
-    public function getLog($customer_id){
-        $query = $this->db->query("SELECT name, modified FROM " . DB_PREFIX . "customer_price_log WHERE customer_id = '" . $customer_id . "'");
-        return $query->row;
-    }
-
-    public function getData($customer_id) {
-		$query = $this->db->query("SELECT * FROM ".DB_PREFIX."customer_price WHERE customer_id='" .  $customer_id . "'");
-
-		foreach($query->rows as $key=>$value) {
-			$product = $this->db->query("SELECT product_id FROM ".DB_PREFIX."product WHERE ean=". $query->rows[$key]['ean']);
-
-			if($product->num_rows != 0)
-			{
-				$product_id = $product->row['product_id'];
-				$name = $this->db->query("SELECT name FROM ".DB_PREFIX."product_description WHERE product_id=". $product_id )->row['name'];
-
-				$query->rows[$key]['product_id'] = $product_id;
-				$query->rows[$key]['name'] = $name;
-			}
-			else 
-			{
-				$query->rows[$key]['product_id'] = '';
-				$query->rows[$key]['name'] = '';
-			}
+		if (isset($this->request->post['tax'])) {
+			$data['tax'] = $this->request->post['tax'];
+		} elseif (!empty($affiliate_info)) {
+			$data['tax'] = $affiliate_info['tax'];
+		} else {
+			$data['tax'] = '';
 		}
 		
-		return $query->rows;
+		if (isset($this->request->post['payment'])) {
+			$data['payment'] = $this->request->post['payment'];
+		} elseif (!empty($affiliate_info)) {
+			$data['payment'] = $affiliate_info['payment'];
+		} else {
+			$data['payment'] = 'cheque';
+		}
+
+		if (isset($this->request->post['cheque'])) {
+			$data['cheque'] = $this->request->post['cheque'];
+		} elseif (!empty($affiliate_info)) {
+			$data['cheque'] = $affiliate_info['cheque'];
+		} else {
+			$data['cheque'] = '';
+		}
+
+		if (isset($this->request->post['paypal'])) {
+			$data['paypal'] = $this->request->post['paypal'];
+		} elseif (!empty($affiliate_info)) {
+			$data['paypal'] = $affiliate_info['paypal'];
+		} else {
+			$data['paypal'] = '';
+		}
+
+		if (isset($this->request->post['bank_name'])) {
+			$data['bank_name'] = $this->request->post['bank_name'];
+		} elseif (!empty($affiliate_info)) {
+			$data['bank_name'] = $affiliate_info['bank_name'];
+		} else {
+			$data['bank_name'] = '';
+		}
+
+		if (isset($this->request->post['bank_branch_number'])) {
+			$data['bank_branch_number'] = $this->request->post['bank_branch_number'];
+		} elseif (!empty($affiliate_info)) {
+			$data['bank_branch_number'] = $affiliate_info['bank_branch_number'];
+		} else {
+			$data['bank_branch_number'] = '';
+		}
+
+		if (isset($this->request->post['bank_swift_code'])) {
+			$data['bank_swift_code'] = $this->request->post['bank_swift_code'];
+		} elseif (!empty($affiliate_info)) {
+			$data['bank_swift_code'] = $affiliate_info['bank_swift_code'];
+		} else {
+			$data['bank_swift_code'] = '';
+		}
+
+		if (isset($this->request->post['bank_account_name'])) {
+			$data['bank_account_name'] = $this->request->post['bank_account_name'];
+		} elseif (!empty($affiliate_info)) {
+			$data['bank_account_name'] = $affiliate_info['bank_account_name'];
+		} else {
+			$data['bank_account_name'] = '';
+		}
+
+		if (isset($this->request->post['bank_account_number'])) {
+			$data['bank_account_number'] = $this->request->post['bank_account_number'];
+		} elseif (!empty($affiliate_info)) {
+			$data['bank_account_number'] = $affiliate_info['bank_account_number'];
+		} else {
+			$data['bank_account_number'] = '';
+		}
+
+		if (isset($this->request->post['custom_field'])) {
+			$data['affiliate_custom_field'] = $this->request->post['custom_field'];
+		} elseif (!empty($affiliate_info)) {
+			$data['affiliate_custom_field'] = json_decode($affiliate_info['custom_field'], true);
+		} else {
+			$data['affiliate_custom_field'] = array();
+		}
+
+		// Added database table creation and data update check
+
+        $this->model_customer_customer->createPriceTable();
+        $this->model_customer_customer->createLogsTable();
+
+		if(isset($this->request->get['customer_id']))
+		{
+			$customer_id = $this->request->get['customer_id'];
+			$update_info = $this->model_customer_customer->getLog($customer_id);
+		}
+		
+        if(!empty($update_info)) {
+            $data['update'] = array(
+                'update_name' => $update_info['name'],
+                'update_date' => $update_info['modified']
+            );
+		}
+
+		$data['header'] = $this->load->controller('common/header');
+		$data['column_left'] = $this->load->controller('common/column_left');
+		$data['footer'] = $this->load->controller('common/footer');
+
+		$this->response->setOutput($this->load->view('customer/customer_form', $data));
 	}
 
-	public function deletePrice($id) {
-        $this->db->query("DELETE FROM " . DB_PREFIX . "customer_price WHERE id = '" . $this->db->escape($id) . "'");
-    }
-	
-    public function deletePrices($customer_id){
-        $this->db->query("DELETE FROM " . DB_PREFIX . "customer_price WHERE customer_id = '" . $customer_id . "'");
+	protected function validateForm() {
+		if (!$this->user->hasPermission('modify', 'customer/customer')) {
+			$this->error['warning'] = $this->language->get('error_permission');
+		}
+
+		if ((utf8_strlen($this->request->post['firstname']) < 1) || (utf8_strlen(trim($this->request->post['firstname'])) > 32)) {
+			$this->error['firstname'] = $this->language->get('error_firstname');
+		}
+
+		if ((utf8_strlen($this->request->post['lastname']) < 1) || (utf8_strlen(trim($this->request->post['lastname'])) > 32)) {
+			$this->error['lastname'] = $this->language->get('error_lastname');
+		}
+
+		if ((utf8_strlen($this->request->post['email']) > 96) || !filter_var($this->request->post['email'], FILTER_VALIDATE_EMAIL)) {
+			$this->error['email'] = $this->language->get('error_email');
+		}
+
+		$customer_info = $this->model_customer_customer->getCustomerByEmail($this->request->post['email']);
+
+		if (!isset($this->request->get['customer_id'])) {
+			if ($customer_info) {
+				$this->error['warning'] = $this->language->get('error_exists');
+			}
+		} else {
+			if ($customer_info && ($this->request->get['customer_id'] != $customer_info['customer_id'])) {
+				$this->error['warning'] = $this->language->get('error_exists');
+			}
+		}
+
+		if ((utf8_strlen($this->request->post['telephone']) < 3) || (utf8_strlen($this->request->post['telephone']) > 32)) {
+			$this->error['telephone'] = $this->language->get('error_telephone');
+		}
+
+		// Custom field validation
+		$this->load->model('customer/custom_field');
+
+		$custom_fields = $this->model_customer_custom_field->getCustomFields(array('filter_customer_group_id' => $this->request->post['customer_group_id']));
+
+		foreach ($custom_fields as $custom_field) {
+			if (($custom_field['location'] == 'account') && $custom_field['required'] && empty($this->request->post['custom_field'][$custom_field['custom_field_id']])) {
+				$this->error['custom_field'][$custom_field['custom_field_id']] = sprintf($this->language->get('error_custom_field'), $custom_field['name']);
+			} elseif (($custom_field['location'] == 'account') && ($custom_field['type'] == 'text') && !empty($custom_field['validation']) && !filter_var($this->request->post['custom_field'][$custom_field['custom_field_id']], FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => $custom_field['validation'])))) {
+				$this->error['custom_field'][$custom_field['custom_field_id']] = sprintf($this->language->get('error_custom_field'), $custom_field['name']);
+			}			
+		}
+
+		if ($this->request->post['password'] || (!isset($this->request->get['customer_id']))) {
+			if ((utf8_strlen(html_entity_decode($this->request->post['password'], ENT_QUOTES, 'UTF-8')) < 4) || (utf8_strlen(html_entity_decode($this->request->post['password'], ENT_QUOTES, 'UTF-8')) > 40)) {
+				$this->error['password'] = $this->language->get('error_password');
+			}
+
+			if ($this->request->post['password'] != $this->request->post['confirm']) {
+				$this->error['confirm'] = $this->language->get('error_confirm');
+			}
+		}
+
+		if (isset($this->request->post['address'])) {
+			foreach ($this->request->post['address'] as $key => $value) {
+				if ((utf8_strlen($value['firstname']) < 1) || (utf8_strlen($value['firstname']) > 32)) {
+					$this->error['address'][$key]['firstname'] = $this->language->get('error_firstname');
+				}
+
+				if ((utf8_strlen($value['lastname']) < 1) || (utf8_strlen($value['lastname']) > 32)) {
+					$this->error['address'][$key]['lastname'] = $this->language->get('error_lastname');
+				}
+
+				if ((utf8_strlen($value['address_1']) < 3) || (utf8_strlen($value['address_1']) > 128)) {
+					$this->error['address'][$key]['address_1'] = $this->language->get('error_address_1');
+				}
+
+				if ((utf8_strlen($value['city']) < 2) || (utf8_strlen($value['city']) > 128)) {
+					$this->error['address'][$key]['city'] = $this->language->get('error_city');
+				}
+
+				$this->load->model('localisation/country');
+
+				$country_info = $this->model_localisation_country->getCountry($value['country_id']);
+
+				if ($country_info && $country_info['postcode_required'] && (utf8_strlen($value['postcode']) < 2 || utf8_strlen($value['postcode']) > 10)) {
+					$this->error['address'][$key]['postcode'] = $this->language->get('error_postcode');
+				}
+
+				if ($value['country_id'] == '') {
+					$this->error['address'][$key]['country'] = $this->language->get('error_country');
+				}
+
+				if (!isset($value['zone_id']) || $value['zone_id'] == '') {
+					$this->error['address'][$key]['zone'] = $this->language->get('error_zone');
+				}
+
+				foreach ($custom_fields as $custom_field) {
+					if (($custom_field['location'] == 'address') && $custom_field['required'] && empty($value['custom_field'][$custom_field['custom_field_id']])) {
+						$this->error['address'][$key]['custom_field'][$custom_field['custom_field_id']] = sprintf($this->language->get('error_custom_field'), $custom_field['name']);
+					} elseif (($custom_field['location'] == 'address') && ($custom_field['type'] == 'text') && !empty($custom_field['validation']) && !filter_var($value['custom_field'][$custom_field['custom_field_id']], FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => $custom_field['validation'])))) {
+						$this->error['address'][$key]['custom_field'][$custom_field['custom_field_id']] = sprintf($this->language->get('error_custom_field'), $custom_field['name']);
+                    }
+				}
+			}
+		}
+
+		if ($this->request->post['affiliate']) {
+			if ($this->request->post['payment'] == 'cheque') {
+				if ($this->request->post['cheque'] == '') {
+					$this->error['cheque'] = $this->language->get('error_cheque');
+				}
+			} elseif ($this->request->post['payment'] == 'paypal') {
+				if ((utf8_strlen($this->request->post['paypal']) > 96) || !filter_var($this->request->post['paypal'], FILTER_VALIDATE_EMAIL)) {
+					$this->error['paypal'] = $this->language->get('error_paypal');
+				}
+			} elseif ($this->request->post['payment'] == 'bank') {
+				if ($this->request->post['bank_account_name'] == '') {
+					$this->error['bank_account_name'] = $this->language->get('error_bank_account_name');
+				}
+		
+				if ($this->request->post['bank_account_number'] == '') {
+					$this->error['bank_account_number'] = $this->language->get('error_bank_account_number');
+				}
+			}
+		
+			if (!$this->request->post['tracking']) {
+				$this->error['tracking'] = $this->language->get('error_tracking');
+			}
+		
+			$affiliate_info = $this->model_customer_customer->getAffliateByTracking($this->request->post['tracking']);
+		
+			if (!isset($this->request->get['customer_id'])) {
+				if ($affiliate_info) {
+					$this->error['tracking'] = $this->language->get('error_tracking_exists');
+				}
+			} else {
+				if ($affiliate_info && ($this->request->get['customer_id'] != $affiliate_info['customer_id'])) {
+					$this->error['tracking'] = $this->language->get('error_tracking_exists');
+				}
+			}
+			
+			foreach ($custom_fields as $custom_field) {
+				if (($custom_field['location'] == 'affiliate') && $custom_field['required'] && empty($this->request->post['custom_field'][$custom_field['custom_field_id']])) {
+					$this->error['custom_field'][$custom_field['custom_field_id']] = sprintf($this->language->get('error_custom_field'), $custom_field['name']);
+				} elseif (($custom_field['location'] == 'affiliate') && ($custom_field['type'] == 'text') && !empty($custom_field['validation']) && !filter_var($this->request->post['custom_field'][$custom_field['custom_field_id']], FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => $custom_field['validation'])))) {
+					$this->error['custom_field'][$custom_field['custom_field_id']] = sprintf($this->language->get('error_custom_field'), $custom_field['name']);
+				}
+			}			
+		}
+		
+		if ($this->error && !isset($this->error['warning'])) {
+			$this->error['warning'] = $this->language->get('error_warning');
+		}
+
+		return !$this->error;
+	}
+
+	protected function validateDelete() {
+		if (!$this->user->hasPermission('modify', 'customer/customer')) {
+			$this->error['warning'] = $this->language->get('error_permission');
+		}
+
+		return !$this->error;
+	}
+
+	protected function validateUnlock() {
+		if (!$this->user->hasPermission('modify', 'customer/customer')) {
+			$this->error['warning'] = $this->language->get('error_permission');
+		}
+
+		return !$this->error;
+	}
+
+	public function login() {
+		if (isset($this->request->get['customer_id'])) {
+			$customer_id = $this->request->get['customer_id'];
+		} else {
+			$customer_id = 0;
+		}
+
+		$this->load->model('customer/customer');
+
+		$customer_info = $this->model_customer_customer->getCustomer($customer_id);
+
+		if ($customer_info) {
+			// Create token to login with
+			$token = token(64);
+
+			$this->model_customer_customer->editToken($customer_id, $token);
+
+			if (isset($this->request->get['store_id'])) {
+				$store_id = $this->request->get['store_id'];
+			} else {
+				$store_id = 0;
+			}
+
+			$this->load->model('setting/store');
+
+			$store_info = $this->model_setting_store->getStore($store_id);
+
+			if ($store_info) {
+				$this->response->redirect($store_info['url'] . 'index.php?route=account/login&token=' . $token);
+			} else {
+				$this->response->redirect(HTTP_CATALOG . 'index.php?route=account/login&token=' . $token);
+			}
+		} else {
+			$this->load->language('error/not_found');
+
+			$this->document->setTitle($this->language->get('heading_title'));
+
+			$data['breadcrumbs'] = array();
+
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('text_home'),
+				'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'], true)
+			);
+
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('heading_title'),
+				'href' => $this->url->link('error/not_found', 'user_token=' . $this->session->data['user_token'], true)
+			);
+
+			$data['header'] = $this->load->controller('common/header');
+			$data['column_left'] = $this->load->controller('common/column_left');
+			$data['footer'] = $this->load->controller('common/footer');
+
+			$this->response->setOutput($this->load->view('error/not_found', $data));
+		}
+	}
+
+	public function history() {
+		$this->load->language('customer/customer');
+
+		$this->load->model('customer/customer');
+
+		if (isset($this->request->get['page'])) {
+			$page = $this->request->get['page'];
+		} else {
+			$page = 1;
+		}
+
+		$data['histories'] = array();
+
+		$results = $this->model_customer_customer->getHistories($this->request->get['customer_id'], ($page - 1) * 10, 10);
+
+		foreach ($results as $result) {
+			$data['histories'][] = array(
+				'comment'    => $result['comment'],
+				'date_added' => date($this->language->get('date_format_short'), strtotime($result['date_added']))
+			);
+		}
+
+		$history_total = $this->model_customer_customer->getTotalHistories($this->request->get['customer_id']);
+
+		$pagination = new Pagination();
+		$pagination->total = $history_total;
+		$pagination->page = $page;
+		$pagination->limit = 10;
+		$pagination->url = $this->url->link('customer/customer/history', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $this->request->get['customer_id'] . '&page={page}', true);
+
+		$data['pagination'] = $pagination->render();
+
+		$data['results'] = sprintf($this->language->get('text_pagination'), ($history_total) ? (($page - 1) * 10) + 1 : 0, ((($page - 1) * 10) > ($history_total - 10)) ? $history_total : ((($page - 1) * 10) + 10), $history_total, ceil($history_total / 10));
+
+		$this->response->setOutput($this->load->view('customer/customer_history', $data));
+	}
+
+	public function addHistory() {
+		$this->load->language('customer/customer');
+
+		$json = array();
+
+		if (!$this->user->hasPermission('modify', 'customer/customer')) {
+			$json['error'] = $this->language->get('error_permission');
+		} else {
+			$this->load->model('customer/customer');
+
+			$this->model_customer_customer->addHistory($this->request->get['customer_id'], $this->request->post['comment']);
+
+			$json['success'] = $this->language->get('text_success');
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	public function transaction() {
+		$this->load->language('customer/customer');
+
+		$this->load->model('customer/customer');
+
+		if (isset($this->request->get['page'])) {
+			$page = $this->request->get['page'];
+		} else {
+			$page = 1;
+		}
+
+		$data['transactions'] = array();
+
+		$results = $this->model_customer_customer->getTransactions($this->request->get['customer_id'], ($page - 1) * 10, 10);
+
+		foreach ($results as $result) {
+			$data['transactions'][] = array(
+				'amount'      => $this->currency->format($result['amount'], $this->config->get('config_currency')),
+				'description' => $result['description'],
+				'date_added'  => date($this->language->get('date_format_short'), strtotime($result['date_added']))
+			);
+		}
+
+		$data['balance'] = $this->currency->format($this->model_customer_customer->getTransactionTotal($this->request->get['customer_id']), $this->config->get('config_currency'));
+
+		$transaction_total = $this->model_customer_customer->getTotalTransactions($this->request->get['customer_id']);
+
+		$pagination = new Pagination();
+		$pagination->total = $transaction_total;
+		$pagination->page = $page;
+		$pagination->limit = 10;
+		$pagination->url = $this->url->link('customer/customer/transaction', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $this->request->get['customer_id'] . '&page={page}', true);
+
+		$data['pagination'] = $pagination->render();
+
+		$data['results'] = sprintf($this->language->get('text_pagination'), ($transaction_total) ? (($page - 1) * 10) + 1 : 0, ((($page - 1) * 10) > ($transaction_total - 10)) ? $transaction_total : ((($page - 1) * 10) + 10), $transaction_total, ceil($transaction_total / 10));
+
+		$this->response->setOutput($this->load->view('customer/customer_transaction', $data));
+	}
+
+	public function addTransaction() {
+		$this->load->language('customer/customer');
+
+		$json = array();
+
+		if (!$this->user->hasPermission('modify', 'customer/customer')) {
+			$json['error'] = $this->language->get('error_permission');
+		} else {
+			$this->load->model('customer/customer');
+
+			$this->model_customer_customer->addTransaction($this->request->get['customer_id'], $this->request->post['description'], $this->request->post['amount']);
+
+			$json['success'] = $this->language->get('text_success');
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	public function reward() {
+		$this->load->language('customer/customer');
+
+		$this->load->model('customer/customer');
+
+		if (isset($this->request->get['page'])) {
+			$page = $this->request->get['page'];
+		} else {
+			$page = 1;
+		}
+
+		$data['rewards'] = array();
+
+		$results = $this->model_customer_customer->getRewards($this->request->get['customer_id'], ($page - 1) * 10, 10);
+
+		foreach ($results as $result) {
+			$data['rewards'][] = array(
+				'points'      => $result['points'],
+				'description' => $result['description'],
+				'date_added'  => date($this->language->get('date_format_short'), strtotime($result['date_added']))
+			);
+		}
+
+		$data['balance'] = $this->model_customer_customer->getRewardTotal($this->request->get['customer_id']);
+
+		$reward_total = $this->model_customer_customer->getTotalRewards($this->request->get['customer_id']);
+
+		$pagination = new Pagination();
+		$pagination->total = $reward_total;
+		$pagination->page = $page;
+		$pagination->limit = 10;
+		$pagination->url = $this->url->link('customer/customer/reward', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $this->request->get['customer_id'] . '&page={page}', true);
+
+		$data['pagination'] = $pagination->render();
+
+		$data['results'] = sprintf($this->language->get('text_pagination'), ($reward_total) ? (($page - 1) * 10) + 1 : 0, ((($page - 1) * 10) > ($reward_total - 10)) ? $reward_total : ((($page - 1) * 10) + 10), $reward_total, ceil($reward_total / 10));
+
+		$this->response->setOutput($this->load->view('customer/customer_reward', $data));
+	}
+
+	public function addReward() {
+		$this->load->language('customer/customer');
+
+		$json = array();
+
+		if (!$this->user->hasPermission('modify', 'customer/customer')) {
+			$json['error'] = $this->language->get('error_permission');
+		} else {
+			$this->load->model('customer/customer');
+
+			$this->model_customer_customer->addReward($this->request->get['customer_id'], $this->request->post['description'], $this->request->post['points']);
+
+			$json['success'] = $this->language->get('text_success');
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	public function ip() {
+		$this->load->language('customer/customer');
+
+		$this->load->model('customer/customer');
+
+		if (isset($this->request->get['page'])) {
+			$page = $this->request->get['page'];
+		} else {
+			$page = 1;
+		}
+
+		$data['ips'] = array();
+
+		$results = $this->model_customer_customer->getIps($this->request->get['customer_id'], ($page - 1) * 10, 10);
+
+		foreach ($results as $result) {
+			$data['ips'][] = array(
+				'ip'         => $result['ip'],
+				'total'      => $this->model_customer_customer->getTotalCustomersByIp($result['ip']),
+				'date_added' => date('d/m/y', strtotime($result['date_added'])),
+				'filter_ip'  => $this->url->link('customer/customer', 'user_token=' . $this->session->data['user_token'] . '&filter_ip=' . $result['ip'], true)
+			);
+		}
+
+		$ip_total = $this->model_customer_customer->getTotalIps($this->request->get['customer_id']);
+
+		$pagination = new Pagination();
+		$pagination->total = $ip_total;
+		$pagination->page = $page;
+		$pagination->limit = 10;
+		$pagination->url = $this->url->link('customer/customer/ip', 'user_token=' . $this->session->data['user_token'] . '&customer_id=' . $this->request->get['customer_id'] . '&page={page}', true);
+
+		$data['pagination'] = $pagination->render();
+
+		$data['results'] = sprintf($this->language->get('text_pagination'), ($ip_total) ? (($page - 1) * 10) + 1 : 0, ((($page - 1) * 10) > ($ip_total - 10)) ? $ip_total : ((($page - 1) * 10) + 10), $ip_total, ceil($ip_total / 10));
+
+		$this->response->setOutput($this->load->view('customer/customer_ip', $data));
+	}
+
+	public function autocomplete() {
+		$json = array();
+
+		if (isset($this->request->get['filter_name']) || isset($this->request->get['filter_email'])) {
+			if (isset($this->request->get['filter_name'])) {
+				$filter_name = $this->request->get['filter_name'];
+			} else {
+				$filter_name = '';
+			}
+
+			if (isset($this->request->get['filter_email'])) {
+				$filter_email = $this->request->get['filter_email'];
+			} else {
+				$filter_email = '';
+			}
+			
+			if (isset($this->request->get['filter_affiliate'])) {
+				$filter_affiliate = $this->request->get['filter_affiliate'];
+			} else {
+				$filter_affiliate = '';
+			}
+			
+			$this->load->model('customer/customer');
+
+			$filter_data = array(
+				'filter_name'      => $filter_name,
+				'filter_email'     => $filter_email,
+				'filter_affiliate' => $filter_affiliate,
+				'start'            => 0,
+				'limit'            => 5
+			);
+
+			$results = $this->model_customer_customer->getCustomers($filter_data);
+
+			foreach ($results as $result) {
+				$json[] = array(
+					'customer_id'       => $result['customer_id'],
+					'customer_group_id' => $result['customer_group_id'],
+					'name'              => strip_tags(html_entity_decode($result['name'], ENT_QUOTES, 'UTF-8')),
+					'customer_group'    => $result['customer_group'],
+					'firstname'         => $result['firstname'],
+					'lastname'          => $result['lastname'],
+					'email'             => $result['email'],
+					'telephone'         => $result['telephone'],
+					'custom_field'      => json_decode($result['custom_field'], true),
+					'address'           => $this->model_customer_customer->getAddresses($result['customer_id'])
+				);
+			}
+		}
+
+		$sort_order = array();
+
+		foreach ($json as $key => $value) {
+			$sort_order[$key] = $value['name'];
+		}
+
+		array_multisort($sort_order, SORT_ASC, $json);
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	public function customfield() {
+		$json = array();
+
+		$this->load->model('customer/custom_field');
+
+		// Customer Group
+		if (isset($this->request->get['customer_group_id'])) {
+			$customer_group_id = $this->request->get['customer_group_id'];
+		} else {
+			$customer_group_id = $this->config->get('config_customer_group_id');
+		}
+
+		$custom_fields = $this->model_customer_custom_field->getCustomFields(array('filter_customer_group_id' => $customer_group_id));
+
+		foreach ($custom_fields as $custom_field) {
+			$json[] = array(
+				'custom_field_id' => $custom_field['custom_field_id'],
+				'required'        => empty($custom_field['required']) || $custom_field['required'] == 0 ? false : true
+			);
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	public function address() {
+		$json = array();
+
+		if (!empty($this->request->get['address_id'])) {
+			$this->load->model('customer/customer');
+
+			$json = $this->model_customer_customer->getAddress($this->request->get['address_id']);
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	// Added code
+
+	public function ImportCSV()
+    {
+        $output = array();
+        $this->load->language('customer/customer');
+
+        if(!empty($this->request->files['file']['name']) && is_file($this->request->files['file']['tmp_name'])) {
+
+            $filetype = explode('.', $this->request->files['file']['name'])[1];
+            $extensions = array('application/vnd.ms-excel','text/plain','text/csv','text/tsv', 'csv');
+
+			if(in_array($filetype, $extensions)) 
+			{
+				$csv = array_map('str_getcsv', file($this->request->files['file']['tmp_name']));
+				array_shift($csv);
+				$data = array();
+
+				foreach ($csv as $row) {
+					$value = explode(";", implode('.', $row));
+					$value = explode('.', $value[0]);
+					array_push($data, array($value[0], $value[1]));
+				}
+
+                $this->load->model('customer/customer');
+                $customer_id = $this->request->get['customer_id'];
+				$admin = $this->user->getUserName();
+				
+				$this->model_customer_customer->addPrices($customer_id, $data);
+				$this->model_customer_customer->setLog($customer_id, $admin);
+				
+                $output['success'] = $this->language->get('success_csv');
+			} 
+			else $output['error'] = $this->language->get('error_csv_filetype');
+        }
+
+        $this->response->addHeader('Content-Type: application/json');
+        $this->response->setOutput(json_encode($output));
     }
 
-    public function deleteLogs($customer_id){
-        $this->db->query("DELETE FROM " . DB_PREFIX . "customer_price_log WHERE customer_id = '" . $customer_id . "'");
+	public function Prices()
+    {
+        $this->load->language('customer/customer');
+        $this->load->model('catalog/product');
+        $this->load->model('customer/customer');
+
+        $data['user_token'] = $this->session->data['user_token'];
+		$data['customer_id'] = $this->request->get['customer_id'];
+
+        $data['prices_table'] = array();
+        $results = $this->model_customer_customer->getData($data['customer_id']);
+		$url = new Url(HTTP_CATALOG, $this->config->get('config_secure') ? HTTP_CATALOG : HTTPS_CATALOG);
+
+        foreach ($results as $result) {
+            $price = $result['special_price'];
+
+			if (!empty($result['special_price']) && $result['special_price'] != null)
+				$price = number_format($result['special_price'], 2);
+
+            $data['prices_table'][] = array(
+				'id' => $result['id'],
+                'ean' => $result['ean'],
+                'special_price' => $price,
+                'date_added' => $result['date_added'],
+                'product_id' => $result['product_id'],
+                'name' => $result['name'],
+                'link' => $url->link('product/product', 'product_id=' . $result['product_id']),
+            );
+		}
+
+        $this->response->setOutput($this->load->view('customer/customer_prices', $data));
+    }
+
+    public function updateRow() {
+        $this->load->language('customer/customer');
+        $this->load->model('customer/customer');
+		$json = array();
+		
+		$row_id = $this->request->post['row_id'];
+		$price = $this->request->post['price'];
+		$ean = $this->request->post['ean'];
+
+        if ($row_id && $price && $ean) {
+            $this->model_customer_customer->setRow($row_id, $price, $ean);
+            $json['success'] = $this->language->get('success_edit');
+		} 
+		else $json['error'] = $this->language->get('error_missing_parameter');
+
+        $this->response->addHeader('Content-Type: application/json');
+        $this->response->setOutput(json_encode($json));
+    }
+
+    public function deleteRow()
+    {
+        $this->load->language('customer/customer');
+        $this->load->model('customer/customer');
+		$json = array();
+		
+		$row_id = $this->request->post['row_id'];
+
+        if ($row_id) {
+            $this->model_customer_customer->deletePrice($this->request->post['row_id']);
+            $json['success'] = $this->language->get('success_deleted');
+		} 
+		else $json['error'] = $this->language->get('error_missing_parameter');
+
+        $this->response->addHeader('Content-Type: application/json');
+        $this->response->setOutput(json_encode($json));
     }
 }

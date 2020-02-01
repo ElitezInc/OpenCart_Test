@@ -20,7 +20,7 @@ Implementuojant CSV failo importą pirkėjų individualioms kainoms nustatyti, b
 
 Sąrašas modifikuotų projekto failų:
 - admin/controller/customer/customer.php 			line 947
-- admin/controller/customer/customer.php 			line 1506
+- admin/controller/customer/customer.php 			line 1509
 - model/customer/customer.php 						line 487
 - admin/language/en-gb/customer/customer.php		line 116
 - admin/view/template/customer/customer_form.twig 	line 35
